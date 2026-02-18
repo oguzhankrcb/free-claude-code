@@ -1,11 +1,10 @@
 """Centralized configuration using Pydantic Settings."""
 
 from functools import lru_cache
-from typing import Optional
 
-from pydantic import field_validator, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .nim import NimSettings
 
@@ -79,18 +78,18 @@ class Settings(BaseSettings):
     )
     # Hugging Face token for faster model downloads (optional)
     hf_token: str = Field(default="", validation_alias="HF_TOKEN")
-    # Model size: "tiny" | "base" | "small" | "medium" | "large-v2"
+    # Model size: "tiny" | "base" | "small" | "medium" | "large-v2" | "large-v3" | "large-v3-turbo"
     whisper_model: str = Field(default="base", validation_alias="WHISPER_MODEL")
-    # Device: "cpu" | "cuda" | "auto" (auto = try cuda, fall back to cpu)
+    # Device: "cpu" | "cuda"
     whisper_device: str = Field(default="cpu", validation_alias="WHISPER_DEVICE")
 
     # ==================== Bot Wrapper Config ====================
-    telegram_bot_token: Optional[str] = None
-    allowed_telegram_user_id: Optional[str] = None
-    discord_bot_token: Optional[str] = Field(
+    telegram_bot_token: str | None = None
+    allowed_telegram_user_id: str | None = None
+    discord_bot_token: str | None = Field(
         default=None, validation_alias="DISCORD_BOT_TOKEN"
     )
-    allowed_discord_channels: Optional[str] = Field(
+    allowed_discord_channels: str | None = Field(
         default=None, validation_alias="ALLOWED_DISCORD_CHANNELS"
     )
     claude_workspace: str = "./agent_workspace"
@@ -116,6 +115,13 @@ class Settings(BaseSettings):
             return None
         return v
 
+    @field_validator("whisper_device")
+    @classmethod
+    def validate_whisper_device(cls, v: str) -> str:
+        if v not in ("cpu", "cuda"):
+            raise ValueError(f"whisper_device must be 'cpu' or 'cuda', got {v!r}")
+        return v
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -123,7 +129,7 @@ class Settings(BaseSettings):
     )
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()
