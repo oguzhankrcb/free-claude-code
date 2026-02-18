@@ -1,0 +1,31 @@
+services:
+  free-claude-code:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: free-claude-code
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    env_file:
+      - .env
+    volumes:
+      # Persist agent workspace (sessions, plans, logs) across restarts
+      - agent_workspace:/app/agent_workspace
+      # Optional: mount a project directory for the Claude CLI to work in
+      # - /path/to/your/project:/workspace
+    environment:
+      # Override CLAUDE_WORKSPACE to point to the named volume path
+      CLAUDE_WORKSPACE: /app/agent_workspace
+      # If you mount a project directory above, set ALLOWED_DIR to /workspace
+      # ALLOWED_DIR: /workspace
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  agent_workspace:
+    driver: local
