@@ -6,12 +6,13 @@ services:
     container_name: free-claude-code
     restart: unless-stopped
     ports:
-      - "8082:8082"
+      - "127.0.0.1:8087:8082"
     env_file:
       - .env
     volumes:
       # Persist agent workspace (sessions, plans, logs) across restarts
       - agent_workspace:/app/agent_workspace
+      - ./server.log:/app/server.log
       # Optional: mount a project directory for the Claude CLI to work in
       # - /path/to/your/project:/workspace
     environment:

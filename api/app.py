@@ -5,6 +5,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
 
@@ -191,6 +192,15 @@ def create_app() -> FastAPI:
     app.include_router(router)
 
     # Exception handlers
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(request: Request, exc: RequestValidationError):
+        """Log validation errors so we can debug 422s."""
+        logger.error(f"Validation Error (422): {exc.errors()}")
+        return JSONResponse(
+            status_code=422,
+            content={"detail": exc.errors()},
+        )
+
     @app.exception_handler(ProviderError)
     async def provider_error_handler(request: Request, exc: ProviderError):
         """Handle provider-specific errors and return Anthropic format."""

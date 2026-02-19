@@ -22,7 +22,13 @@ class Role(StrEnum):
 
 class ContentBlockText(BaseModel):
     type: Literal["text"]
-    text: str
+    text: Optional[str] = None
+
+    @field_validator("text", mode="before")
+    @classmethod
+    def coerce_none_text(cls, v):
+        # Model sometimes returns text: null for empty blocks — treat as empty string
+        return v if v is not None else ""
 
 
 class ContentBlockImage(BaseModel):
@@ -46,6 +52,7 @@ class ContentBlockToolResult(BaseModel):
 class ContentBlockThinking(BaseModel):
     type: Literal["thinking"]
     thinking: str
+    signature: Optional[str] = None  # Claude sometimes includes this field
 
 
 class SystemContent(BaseModel):
