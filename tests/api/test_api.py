@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
 from api.app import app
-from api.dependencies import get_provider
+from api.dependencies import get_provider_factory
 from providers.nvidia_nim import NvidiaNimProvider
 
 # Mock provider
@@ -23,11 +23,15 @@ async def _mock_stream_response(*args, **kwargs):
 mock_provider.stream_response = _mock_stream_response
 
 
-def override_get_provider():
-    return mock_provider
+def override_get_provider_factory():
+    class MockFactory:
+        def get(self, provider_type=None):
+            return mock_provider
+
+    return MockFactory()
 
 
-app.dependency_overrides[get_provider] = override_get_provider
+app.dependency_overrides[get_provider_factory] = override_get_provider_factory
 client = TestClient(app)
 
 

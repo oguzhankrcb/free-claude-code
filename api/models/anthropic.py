@@ -127,13 +127,29 @@ class MessagesRequest(BaseModel):
 
     @model_validator(mode="after")
     def map_model(self) -> Self:
-        """Map any Claude model name to the configured model."""
+        """Map any Claude model name to the configured provider-specific model."""
         settings = get_settings()
         if self.original_model is None:
             self.original_model = self.model
 
+        # Determine which provider this request is going to
+        provider_type = settings.provider_type
+        if self.metadata and "provider" in self.metadata:
+            provider_type = self.metadata["provider"]
+
+        # Select the correct default model based on the provider
+        default_model = settings.model
+        if provider_type == "nvidia_nim" and settings.nvidia_nim_model:
+            default_model = settings.nvidia_nim_model
+        elif provider_type == "vertex_ai" and settings.vertex_ai_model:
+            default_model = settings.vertex_ai_model
+        elif provider_type == "open_router" and settings.open_router_model:
+            default_model = settings.open_router_model
+        elif provider_type == "lmstudio" and settings.lm_studio_model:
+            default_model = settings.lm_studio_model
+
         # Use centralized model normalization
-        normalized = normalize_model_name(self.model, settings.model)
+        normalized = normalize_model_name(self.model, default_model)
         if normalized != self.model:
             self.model = normalized
 
@@ -151,12 +167,31 @@ class TokenCountRequest(BaseModel):
     thinking: ThinkingConfig | None = None
     tool_choice: dict[str, Any] | None = None
 
-    @field_validator("model")
-    @classmethod
-    def validate_model_field(cls, v: str, info: Any) -> str:
-        """Map any Claude model name to the configured model."""
+    metadata: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def map_model(self) -> Self:
+        """Map any Claude model name to the configured provider-specific model."""
         settings = get_settings()
-        return normalize_model_name(v, settings.model)
+
+        # Determine which provider this request is going to
+        provider_type = settings.provider_type
+        if self.metadata and "provider" in self.metadata:
+            provider_type = self.metadata["provider"]
+
+        # Select the correct default model based on the provider
+        default_model = settings.model
+        if provider_type == "nvidia_nim" and settings.nvidia_nim_model:
+            default_model = settings.nvidia_nim_model
+        elif provider_type == "vertex_ai" and settings.vertex_ai_model:
+            default_model = settings.vertex_ai_model
+        elif provider_type == "open_router" and settings.open_router_model:
+            default_model = settings.open_router_model
+        elif provider_type == "lmstudio" and settings.lm_studio_model:
+            default_model = settings.lm_studio_model
+
+        self.model = normalize_model_name(self.model, default_model)
+        return self
 
 
 # Force Pydantic to fully resolve all forward references.

@@ -6,8 +6,10 @@ Context vars (request_id, node_id, chat_id) from contextualize() are
 included at top level for easy grep/filter.
 """
 
+import asyncio
 import json
 import logging
+import os
 
 from loguru import logger
 
@@ -56,6 +58,18 @@ class InterceptHandler(logging.Handler):
         )
 
 
+async def _truncate_log_periodically(log_file: str, interval_seconds: int = 86400) -> None:
+    """Periodically truncate the given log file."""
+    while True:
+        await asyncio.sleep(interval_seconds)
+        try:
+            # truncate -s 0 equivalent in Python
+            with open(log_file, "w", encoding="utf-8") as f:
+                f.truncate()
+        except Exception as e:
+            logger.error(f"Failed to truncate log file {log_file}: {e}")
+
+
 def configure_logging(log_file: str, *, force: bool = False) -> None:
     """Configure loguru with JSON output to log_file and intercept stdlib logging.
 
@@ -81,6 +95,24 @@ def configure_logging(log_file: str, *, force: bool = False) -> None:
         encoding="utf-8",
         mode="a",
     )
+
+    # Add error file sink: JSON lines, ERROR level, NEVER TRUNCATED
+    error_log_file = os.path.join(os.path.dirname(log_file), "error.log")
+    logger.add(
+        error_log_file,
+        level="ERROR",
+        format=_serialize_with_context,
+        encoding="utf-8",
+        mode="a",
+    )
+
+    # Start background task to truncate the main log file every 24 hours
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(_truncate_log_periodically(log_file))
+    except RuntimeError:
+        # If no event loop is running (e.g. during certain tests), we just skip setting up the truncator
+        pass
 
     # Intercept stdlib logging: route all root logger output to loguru
     intercept = InterceptHandler()

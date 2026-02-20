@@ -12,7 +12,7 @@ from providers.base import BaseProvider
 from providers.exceptions import ProviderError
 from providers.logging_utils import build_request_summary, log_request_compact
 
-from .dependencies import get_provider, get_settings
+from .dependencies import get_provider_factory, get_settings
 from .models.anthropic import MessagesRequest, TokenCountRequest
 from .models.responses import TokenCountResponse
 from .optimization_handlers import try_optimizations
@@ -30,12 +30,17 @@ router = APIRouter()
 async def create_message(
     request_data: MessagesRequest,
     raw_request: Request,
-    provider: BaseProvider = Depends(get_provider),
+    provider_factory=Depends(get_provider_factory),
     settings: Settings = Depends(get_settings),
 ):
     """Create a message (always streaming)."""
 
     try:
+        req_provider_type = None
+        if request_data.metadata and "provider" in request_data.metadata:
+            req_provider_type = request_data.metadata["provider"]
+        provider = provider_factory.get(req_provider_type)
+
         optimized = try_optimizations(request_data, settings)
         if optimized is not None:
             return optimized

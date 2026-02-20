@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # ==================== Provider Selection ====================
-    # Valid: "nvidia_nim" | "open_router" | "lmstudio"
+    # Valid: "nvidia_nim" | "open_router" | "lmstudio" | "vertex_ai"
     provider_type: str = "nvidia_nim"
 
     # ==================== OpenRouter Config ====================
@@ -39,9 +39,22 @@ class Settings(BaseSettings):
         validation_alias="LM_STUDIO_BASE_URL",
     )
 
-    # ==================== Model ====================
-    # All Claude model requests are mapped to this single model
+    # ==================== Vertex AI Config ====================
+    vertex_ai_api_key: str = Field(default="", validation_alias="VERTEX_AI_API_KEY")
+    vertex_ai_base_url: str = Field(
+        default="",
+        validation_alias="VERTEX_AI_BASE_URL",
+    )
+
+    # ==================== Model Selection ====================
+    # Fallback model if the provider-specific model is not found
     model: str = "moonshotai/kimi-k2-thinking"
+
+    # ==================== Provider-Specific Models ====================
+    nvidia_nim_model: str = Field(default="", validation_alias="NVIDIA_NIM_MODEL")
+    vertex_ai_model: str = Field(default="", validation_alias="VERTEX_AI_MODEL")
+    open_router_model: str = Field(default="", validation_alias="OPENROUTER_MODEL")
+    lm_studio_model: str = Field(default="", validation_alias="LM_STUDIO_MODEL")
 
     # ==================== Provider Rate Limiting ====================
     provider_rate_limit: int = Field(default=40, validation_alias="PROVIDER_RATE_LIMIT")

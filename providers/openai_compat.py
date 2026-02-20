@@ -32,6 +32,7 @@ class OpenAICompatibleProvider(BaseProvider):
         base_url: str,
         api_key: str,
         nim_settings: Any | None = None,
+        default_query: dict[str, str] | None = None,
     ):
         super().__init__(config)
         self._provider_name = provider_name
@@ -46,6 +47,7 @@ class OpenAICompatibleProvider(BaseProvider):
             api_key=self._api_key,
             base_url=self._base_url,
             max_retries=0,
+            default_query=default_query,
             timeout=httpx.Timeout(
                 config.http_read_timeout,
                 connect=config.http_connect_timeout,
@@ -156,6 +158,8 @@ class OpenAICompatibleProvider(BaseProvider):
         error_message = ""
 
         try:
+            if "stream" in body:
+                del body["stream"]
             stream = await self._global_rate_limiter.execute_with_retry(
                 self._client.chat.completions.create, **body, stream=True
             )
